@@ -4,7 +4,8 @@
   "description": "Migrate entire folders into Team Drives",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"No tests implemented\""
+    "test": "echo \"No tests implemented\"",
+    "start": "node main.js"
   },
   "repository": {
     "type": "git",
@@ -20,5 +21,8 @@
   "bugs": {
     "url": "https://github.com/alonsohki/google-drive-migrator/issues"
   },
-  "homepage": "https://github.com/alonsohki/google-drive-migrator#readme"
+  "homepage": "https://github.com/alonsohki/google-drive-migrator#readme",
+  "dependencies": {
+    "googleapis": "^39.2.0"
+  }
 }
