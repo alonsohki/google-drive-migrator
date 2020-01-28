@@ -1,0 +1,24 @@
+{
+  "name": "google-drive-migrator",
+  "version": "1.0.0",
+  "description": "Migrate entire folders into Team Drives",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"No tests implemented\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/alonsohki/google-drive-migrator.git"
+  },
+  "keywords": [
+    "google",
+    "drive",
+    "migrator"
+  ],
+  "author": "Alberto Alonso",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/alonsohki/google-drive-migrator/issues"
+  },
+  "homepage": "https://github.com/alonsohki/google-drive-migrator#readme"
+}
