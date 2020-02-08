@@ -1,6 +1,6 @@
 {
-  "name": "@alonsohki/npmgoogle-drive-migrator",
-  "version": "1.0.1",
+  "name": "@alonsohki/google-drive-migrator",
+  "version": "1.0.2",
   "description": "Migrate entire folders into Team Drives",
   "main": "main.js",
   "scripts": {

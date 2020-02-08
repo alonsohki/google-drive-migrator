@@ -39,7 +39,7 @@ async function* getEntryIterator(context, currentDir, condition, nextPageToken) 
     }
 
     if (data.nextPageToken) {
-        const nextPage = getEntryIterator(context, currentDir, data.nextPageToken);
+        const nextPage = getEntryIterator(context, currentDir, condition, data.nextPageToken);
         let file = await nextPage.next().catch(errHandler);
         while (file && !file.done) {
             yield file.value;
