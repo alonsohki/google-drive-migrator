@@ -87,16 +87,18 @@ async function startMigration(context, teamDrive, directory, fullSourcePath, ful
     }
 
     // Delete the source directory
-    if (!context.simulate) {
-        await context.pushOperation(async(api) => {
-            const metadata = {
-                fileId: directory.id,
-                supportsTeamDrives: true
-            };
-            await api.files.delete(metadata);
-        });
+    if (!context.keepFolders) {
+        if (!context.simulate) {
+            await context.pushOperation(async(api) => {
+                const metadata = {
+                    fileId: directory.id,
+                    supportsTeamDrives: true
+                };
+                await api.files.delete(metadata);
+            });
+        }
+        console.log(`[DELETE:dir] ${fullSourcePath}`);
     }
-    console.log(`[DELETE:dir] ${fullSourcePath}`);
 }
 
 async function migratePath(context, teamDrive, path, currentDir, fullPath) {
@@ -120,6 +122,7 @@ async function migrate(options) {
     let operations = [];
     const context = {
         simulate: options.simulate,
+        keepFolders: options.keepFolders,
         pushOperation: throttle.throttleAsync(async function(operation) {
             return new Promise(async(resolve, reject) => {
                 try {
@@ -151,6 +154,7 @@ let opt = getopt.create([
     ["t", "teamdrive=ARG",      "Name of the team drive"],
     ["p", "path=ARG",           "Path to migrate"],
     ["",  "max-operations=ARG", "Maximum number of parallel operations (default 10)"],
+    ["k", "keep-folders",       "Do NOT remove the source folders after all the files have been moved"],
     ["",  "simulate",           "Use this flag if you want to only simulate the migration"],
     ["h", "help",               "Display this help"]
 ])
@@ -167,8 +171,9 @@ else {
     const options = {
         teamdrive: opt.options.teamdrive,
         path: opt.options.path,
+        keepFolders: opt.options["keep-folders"] && true,
         simulate: opt.options.simulate && true,
-        maxOperations: opt.options["max-operations"] || 1,
+        maxOperations: opt.options["max-operations"] || 10,
     };
     migrate(options);
 }
