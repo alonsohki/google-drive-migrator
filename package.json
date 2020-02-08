@@ -1,11 +1,14 @@
 {
-  "name": "@alonsohki/google-drive-migrator",
-  "version": "1.0.0",
+  "name": "@alonsohki/npmgoogle-drive-migrator",
+  "version": "1.0.1",
   "description": "Migrate entire folders into Team Drives",
   "main": "main.js",
   "scripts": {
     "test": "echo \"No tests implemented\"",
     "start": "node main.js"
+  },
+  "bin": {
+    "google-drive-migrate": "cli.js"
   },
   "repository": {
     "type": "git",
