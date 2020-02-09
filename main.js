@@ -73,7 +73,7 @@ async function startMigration(context, teamDrive, directory, fullSourcePath, ful
         }
 
         if (context.copy) {
-            if (await fileExists(context, file, sharedDir, "mimeType != 'application/vnd.google-apps.folder'")) {
+            if (sharedDir && await fileExists(context, file, sharedDir, "mimeType != 'application/vnd.google-apps.folder'")) {
                 console.log(`[IGNORE:file] ${fullSourcePath}/${file.name}`);
             }
             else {
