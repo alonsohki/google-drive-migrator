@@ -20,7 +20,7 @@ async function fileExists(context, file, dir, condition) {
     });
 }
 
-async function startMigration(context, teamDrive, directory, fullSourcePath, fullTargetPath) {
+async function startMigration(context, teamDriveDir, teamDriveDirJustCreated, directory, fullSourcePath, fullTargetPath) {
     let sharedDir = null;
     let isNewFolder;
 
@@ -28,8 +28,8 @@ async function startMigration(context, teamDrive, directory, fullSourcePath, ful
     fullTargetPath = `${fullTargetPath}/${directory.name}`;
 
     // Check if the target dir already exists in the team drive
-    if (teamDrive) {
-        sharedDir = await fileExists(context, directory, teamDrive, "mimeType = 'application/vnd.google-apps.folder'");
+    if (teamDriveDir && !teamDriveDirJustCreated) {
+        sharedDir = await fileExists(context, directory, teamDriveDir, "mimeType = 'application/vnd.google-apps.folder'");
     }
 
     // Create, if necessary, the target dir
@@ -39,7 +39,7 @@ async function startMigration(context, teamDrive, directory, fullSourcePath, ful
                 requestBody: {
                     name: directory.name,
                     mimeType: "application/vnd.google-apps.folder",
-                    parents: [ teamDrive.id ],
+                    parents: [ teamDriveDir.id ],
                 },
                 supportsTeamDrives: true,
                 includeTeamDriveItems: true
@@ -62,7 +62,7 @@ async function startMigration(context, teamDrive, directory, fullSourcePath, ful
     const folderIterator = iterators.getFolderIterator(context, directory);
     let dir = await folderIterator.next().catch(errHandler);
     while (dir && !dir.done) {
-        await startMigration(context, sharedDir, dir.value, fullSourcePath, fullTargetPath).catch(errHandler);
+        await startMigration(context, sharedDir, isNewFolder, dir.value, fullSourcePath, fullTargetPath).catch(errHandler);
         dir = await folderIterator.next().catch(errHandler);
     }
 
@@ -133,7 +133,7 @@ async function migratePath(context, teamDrive, path, currentDir, fullPath) {
     if (path.length == 0) {
         console.log(`- Begin migration of ${fullPath} (${currentDir.id})`);
         fullPath = fullPath.substring(0, fullPath.lastIndexOf("/"));
-        return startMigration(context, teamDrive, currentDir, fullPath, `[${teamDrive.name}]`).catch(errHandler);
+        return startMigration(context, teamDrive, false, currentDir, fullPath, `[${teamDrive.name}]`).catch(errHandler);
     }
     else {
         const folders = await iterators.getFoldersWithName(context, currentDir, path[0]);
