@@ -22,6 +22,7 @@ async function fileExists(context, file, dir, condition) {
 
 async function startMigration(context, teamDrive, directory, fullSourcePath, fullTargetPath) {
     let sharedDir = null;
+    let isNewFolder;
 
     fullSourcePath = `${fullSourcePath}/${directory.name}`;
     fullTargetPath = `${fullTargetPath}/${directory.name}`;
@@ -49,9 +50,11 @@ async function startMigration(context, teamDrive, directory, fullSourcePath, ful
                 return resp.data;
             });
         }
+        isNewFolder = true;
         console.log(`[CREATE:dir] ${fullTargetPath}`);
     }
     else {
+        isNewFolder = false;
         console.log(`[REUSE:dir] ${fullTargetPath}`);
     }
 
@@ -73,7 +76,7 @@ async function startMigration(context, teamDrive, directory, fullSourcePath, ful
         }
 
         if (context.copy) {
-            if (sharedDir && await fileExists(context, file, sharedDir, "mimeType != 'application/vnd.google-apps.folder'")) {
+            if (!isNewFolder && sharedDir && await fileExists(context, file, sharedDir, "mimeType != 'application/vnd.google-apps.folder'")) {
                 console.log(`[IGNORE:file] ${fullSourcePath}/${file.name}`);
             }
             else {
