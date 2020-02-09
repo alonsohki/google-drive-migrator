@@ -1,9 +1,24 @@
 const {google} = require("googleapis");
-const getopt = require("node-getopt");
 const iterators = require("./iterators");
 const throttle = require("./throttle");
 
 const errHandler = err => { throw err };
+
+async function fileExists(context, file, dir, condition) {
+    const query = `'${dir.id}' in parents and name = '${file.name}' and trashed = false and ${condition}`;
+    const metadata = {
+        q: query,
+        supportsTeamDrives: true,
+        includeTeamDriveItems: true,
+    };
+    return await context.pushOperation(async(api) => {
+        const resp = await api.files.list(metadata).catch(errHandler);
+        const data = resp.data;
+        if (data.files && data.files.length > 0) {
+            return data.files[0];
+        }
+    });
+}
 
 async function startMigration(context, teamDrive, directory, fullSourcePath, fullTargetPath) {
     let sharedDir = null;
@@ -13,20 +28,7 @@ async function startMigration(context, teamDrive, directory, fullSourcePath, ful
 
     // Check if the target dir already exists in the team drive
     if (teamDrive) {
-        const query = `'${teamDrive.id}' in parents and name = '${directory.name}' and trashed = false and mimeType = 'application/vnd.google-apps.folder'`;
-        const metadata = {
-            q: query,
-            supportsTeamDrives: true,
-            includeTeamDriveItems: true,
-        };
-
-        sharedDir = await context.pushOperation(async(api) => {
-            const resp = await api.files.list(metadata).catch(errHandler);
-            const data = resp.data;
-            if (data.files && data.files.length > 0) {
-                return data.files[0];
-            }
-        });
+        sharedDir = await fileExists(context, directory, teamDrive, "mimeType = 'application/vnd.google-apps.folder'");
     }
 
     // Create, if necessary, the target dir
@@ -61,7 +63,7 @@ async function startMigration(context, teamDrive, directory, fullSourcePath, ful
         dir = await folderIterator.next().catch(errHandler);
     }
 
-    // Move all the files
+    // Move or copy all the files
     const fileIterator = iterators.getFileIterator(context, directory);
     let current = await fileIterator.next().catch(errHandler);
     while (current && !current.done) {
@@ -70,24 +72,47 @@ async function startMigration(context, teamDrive, directory, fullSourcePath, ful
             throw file;
         }
 
-        if (!context.simulate) {
-            await context.pushOperation(async(api) => {
-                const metadata = {
-                    fileId: file.id,
-                    addParents: sharedDir.id,
-                    supportsTeamDrives: true,
-                    includeTeamDriveItems: true
-                };
-                await api.files.update(metadata).catch(errHandler);
-            });
+        if (context.copy) {
+            if (await fileExists(context, file, sharedDir, "mimeType != 'application/vnd.google-apps.folder'")) {
+                console.log(`[IGNORE:file] ${fullSourcePath}/${file.name}`);
+            }
+            else {
+                if (!context.simulate) {
+                    await context.pushOperation(async(api) => {
+                        const metadata = {
+                            fileId: file.id,
+                            requestBody: {
+                                parents: [sharedDir.id]
+                            },
+                            supportsTeamDrives: true,
+                            includeTeamDriveItems: true
+                        };
+                        await api.files.copy(metadata).catch(errHandler);
+                    });
+                }
+                console.log(`[COPY:file] ${fullSourcePath}/${file.name}`);
+            }
         }
-        console.log(`[MOVE:file] ${fullSourcePath}/${file.name}`);
+        else {
+            if (!context.simulate) {
+                await context.pushOperation(async(api) => {
+                    const metadata = {
+                        fileId: file.id,
+                        addParents: sharedDir.id,
+                        supportsTeamDrives: true,
+                        includeTeamDriveItems: true
+                    };
+                    await api.files.update(metadata).catch(errHandler);
+                });
+            }
+            console.log(`[MOVE:file] ${fullSourcePath}/${file.name}`);
+        }
 
         current = await fileIterator.next().catch(errHandler);
     }
 
     // Delete the source directory
-    if (!context.keepFolders) {
+    if (!context.keepFolders && !context.copy) {
         if (!context.simulate) {
             await context.pushOperation(async(api) => {
                 const metadata = {
@@ -123,6 +148,7 @@ async function migrate(options) {
     const context = {
         simulate: options.simulate,
         keepFolders: options.keepFolders,
+        copy: options.copy,
         pushOperation: throttle.throttleAsync(async function(operation) {
             return new Promise(async(resolve, reject) => {
                 try {
@@ -150,30 +176,4 @@ async function migrate(options) {
     }
 }
 
-let opt = getopt.create([
-    ["t", "teamdrive=ARG",      "Name of the team drive"],
-    ["p", "path=ARG",           "Path to migrate"],
-    ["",  "max-operations=ARG", "Maximum number of parallel operations (default 10)"],
-    ["k", "keep-folders",       "Do NOT remove the source folders after all the files have been moved"],
-    ["",  "simulate",           "Use this flag if you want to only simulate the migration"],
-    ["h", "help",               "Display this help"]
-])
-.bindHelp()
-.parseSystem();
-
-if (!opt.options.teamdrive) {
-    console.error("Missing --teamdrive option. Run the command with --help to get more information.");
-}
-else if (!opt.options.path) {
-    console.error("Missing --path option. Run the command with --help to get more information.");
-}
-else {
-    const options = {
-        teamdrive: opt.options.teamdrive,
-        path: opt.options.path,
-        keepFolders: opt.options["keep-folders"] && true,
-        simulate: opt.options.simulate && true,
-        maxOperations: opt.options["max-operations"] || 10,
-    };
-    migrate(options);
-}
+module.exports.migrate = migrate;
