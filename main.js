@@ -4,8 +4,12 @@ const throttle = require("./throttle");
 
 const errHandler = err => { throw err };
 
+function escapeQuotes(name) {
+    return name.replace(/'/g, "\\'");
+}
+
 async function fileExists(context, file, dir, condition) {
-    const query = `'${dir.id}' in parents and name = '${file.name}' and trashed = false and ${condition}`;
+    const query = `'${dir.id}' in parents and name = '${escapeQuotes(file.name)}' and trashed = false and ${condition}`;
     const metadata = {
         q: query,
         supportsTeamDrives: true,
